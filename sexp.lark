@@ -1,0 +1,29 @@
+start: sexp?
+
+?sexp: "(" symbol (value | sexp)* ")"  -> sexp
+     | "'" value
+
+?value: atom
+      | list
+      | pair
+
+?list: "(" (value | symbol)* ")"  -> list
+?pair: "(" atom "." atom ")"      -> list
+
+?symbol: IDENTIFIER    -> symbol
+?atom: TRUE            -> true
+     | SIGNED_INT      -> int
+     | ESCAPED_STRING  -> string
+     | NIL             -> nil
+
+TRUE: "t"
+FALSE: "f"
+NIL: "nil"
+IDENTIFIER: LETTER (LETTER | DIGIT | "-")*
+
+%import common.DIGIT
+%import common.ESCAPED_STRING
+%import common.LETTER
+%import common.SIGNED_INT
+%import common.WS
+%ignore WS
