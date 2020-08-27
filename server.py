@@ -56,18 +56,35 @@ async def agda_interactor(process: asyncio.subprocess.Process):
         except websockets.exceptions.ConnectionClosed:
             print('Client disconnects abnormally')
 
+    async def _consume_line(reader) -> bytes:
+        # NOTE: the prompt never ends with a newline, which causes
+        # newline() to block indefinitely!
+        while True:
+            peek = await reader.read(len(prompt))
+            if peek != prompt:
+                break
+
+        buf = [peek]
+
+        done = False
+        while not done:
+            try:
+                data = await reader.readuntil(b'\n')
+                done = True
+            except asyncio.LimitOverrunError as limerr:
+                sz = limerr.consumed
+                data = await reader.readexactly(sz)
+            finally:
+                buf.append(data)
+
+        return b''.join(buf).rstrip()
+
     async def _read_from_agda(websocket, path):
         while True:
-            # NOTE: the prompt never ends with a newline, which causes
-            # newline() to block indefinitely!
             async with read_lock:
-                peek = await process.stdout.read(len(prompt))
-                if peek == prompt:
-                    evt_idle.set()
-                    continue
-
                 # the lock ensures atomicity of reading
-                data = (peek + await process.stdout.readline()).rstrip()
+                data = await _consume_line(process.stdout)
+            evt_idle.set()
 
             try:
                 if not data.startswith(b'('):
