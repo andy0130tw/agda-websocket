@@ -1,15 +1,18 @@
-start: sexp?
+start: (sexp | lastcmd)?
 
 ?sexp: "(" symbol (value | sexp)* ")"  -> sexp
      | "'" value
+
+?lastcmd: "(" "(" "last" "." atom ")" "." sexp ")" -> lastcmd
 
 ?value: atom
       | list
       | pair
 
-?list: "(" (value | symbol)* ")"  -> list
-?pair: "(" atom "." atom ")"      -> list
+?list: "(" quoted* ")"            -> list
+?pair: "(" quoted "." quoted ")"  -> list
 
+?quoted: value | symbol
 ?symbol: IDENTIFIER    -> symbol
 ?atom: TRUE            -> true
      | SIGNED_INT      -> int
